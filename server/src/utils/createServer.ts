@@ -1,9 +1,12 @@
-import fastify from "fastify";
+import fastify, { FastifyReply, FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import { CORS_ORIGIN } from "../constants";
 import jwt from "@fastify/jwt";
 import fs from "fs";
 import path from "path";
+import cookie from "@fastify/cookie";
+import userRoutes from "../modules/user/user.route";
+import vaultRoutes from "../modules/vault/vault.route";
 
 function createServer() {
   const app = fastify();
@@ -30,6 +33,26 @@ function createServer() {
       signed: false,
     },
   });
+
+  app.register(cookie, {
+    parseOptions: {},
+  });
+
+  app.decorate(
+    "authenticate",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const user = await request.jwtVerify<{
+          _id: string;
+        }>();
+        request.user = user;
+      } catch (e) {
+        return reply.send(e);
+      }
+    }
+  );
+  app.register(userRoutes,{prefix:'api/users'});
+  app.register(vaultRoutes,{prefix:'api/vault'});
   return app;
 }
 
